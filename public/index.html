@@ -1,0 +1,233 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0F0F0F"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><title>JOKO</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,'Segoe UI',Roboto,sans-serif;background:#FAF8F5;color:#0F0F0F;font-size:16px}
+#app{max-width:480px;margin:0 auto;padding:12px 18px 100px;min-height:100vh}
+h1{font-size:28px;line-height:1.15;margin:8px 0}.discret{font-size:14px;color:#6B6B6B}.etiquette{font-size:14px;font-weight:800;margin:18px 0 8px}
+input{width:100%;min-height:54px;border:1.5px solid #E5E1DA;border-radius:14px;padding:0 14px;font-size:16px;background:#fff}input:focus{outline:3px solid rgba(15,15,15,.15);border-color:#0F0F0F}
+.icone{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.entete{display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:52px;margin-bottom:6px}.entete-titre{flex:1;font-weight:800;font-size:17px}
+.bouton-rond{width:44px;height:44px;border-radius:22px;background:#fff;border:1px solid #E5E1DA;display:flex;align-items:center;justify-content:center;position:relative;flex:none;color:#0F0F0F}.bouton-rond i{position:absolute;top:10px;right:11px;width:9px;height:9px;border-radius:5px;background:#D93025}
+.recherche{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #E5E1DA;border-radius:14px;padding:0 14px;margin:12px 0;color:#6B6B6B}.recherche input{border:0;min-height:50px;padding:0;color:#0F0F0F}.recherche input:focus{outline:0}.recherche:focus-within{border-color:#0F0F0F}
+.bouton-principal{display:block;width:100%;min-height:54px;border:0;border-radius:14px;background:#F7941D;color:#0F0F0F;font-size:17px;font-weight:800;box-shadow:0 3px 0 #B85C00;margin-top:16px}.bouton-principal:disabled{opacity:.5}
+.lien-action{background:none;border:0;color:#B3261E;font-weight:800;font-size:16px;width:100%;min-height:48px;margin-top:8px}
+.bandeau{background:#0F0F0F;color:#fff;margin:-12px -18px 0;padding:56px 22px 28px;border-radius:0 0 32px 32px}.bandeau .discret{color:#B8B3AB}.logo{width:52px;height:52px;border-radius:15px;background:#FFC400;color:#0F0F0F;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.puces{display:flex;flex-wrap:wrap;gap:8px}.puce{border:1.5px solid #E5E1DA;background:#fff;border-radius:999px;padding:10px 14px;font-size:14px;font-weight:700;min-height:44px}.puce.actif{background:#0F0F0F;border-color:#0F0F0F;color:#fff}
+.grille{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tuile{background:#fff;border:1.5px solid #E5E1DA;border-radius:18px;min-height:92px;font-size:15px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}.tuile .icone{width:28px;height:28px}
+.carte{display:block;width:100%;text-align:left;background:#fff;border:1px solid #E5E1DA;border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,15,15,.06);font:inherit;color:inherit}.carte-titre{font-size:17px;font-weight:800;margin:8px 0 3px}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:800}.badge .icone{width:14px;height:14px;stroke-width:3}.verifiee{background:#E3F4EA;color:#1B6B3D}.verifiee .icone{stroke:#2E9E5B}.a-verifier{background:#FFF8DB;color:#6B4A00;box-shadow:inset 0 0 0 1px #EBD98F}.a-verifier .icone{stroke:#C99700}.signalee{background:#FCE4E2;color:#B3261E}.signalee .icone{stroke:#D93025}
+.note{border-radius:12px;padding:12px;margin:14px 0;font-weight:700;font-size:15px}.carte-noire{background:#0F0F0F;color:#fff;border-radius:20px;padding:16px;margin-top:14px}.carte-noire .bouton-principal{min-height:44px;font-size:15px}
+.ligne{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #E5E1DA;font-size:15px}.ligne-notif{display:flex;gap:12px;align-items:flex-start}.point{width:12px;height:12px;border-radius:6px;margin-top:5px;flex:none}
+.choix{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #E5E1DA;border-radius:14px;padding:16px;margin-bottom:8px;font-size:16px;font-weight:800}.choix.actif{border:2px solid #0F0F0F}
+#barreOnglets{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #E5E1DA;max-width:480px;margin:auto;height:72px}#barreOnglets[hidden]{display:none}#barreOnglets button{flex:1;border:0;background:none;font-weight:800;font-size:12px;color:#6B6B6B;border-top:3px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}#barreOnglets .actif{color:#0F0F0F;border-top-color:#0F0F0F}
+#bandeauHorsLigne{background:#0F0F0F;color:#fff;text-align:center;padding:8px;font-size:14px;font-weight:700;display:none;position:sticky;top:0;z-index:5}.erreur{color:#B3261E;font-weight:700;margin-top:10px}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="accueil" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9H3z"/></symbol><symbol id="liste" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="profil" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6"/></symbol><symbol id="retour" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol><symbol id="loupe" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5"/></symbol><symbol id="coche" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol><symbol id="alerte" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.5h.01"/></symbol><symbol id="drapeau" viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></symbol><symbol id="cloche" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></symbol><symbol id="horloge" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2"/></symbol><symbol id="lieu" viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="type0" viewBox="0 0 24 24"><path d="M3 7h18v13H3zM9 7V4h6v3"/></symbol><symbol id="type1" viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5"/></symbol><symbol id="type2" viewBox="0 0 24 24"><path d="M6 8h12l1 12H5zM9 8a3 3 0 0 1 6 0"/></symbol><symbol id="type3" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM8 20h8M12 16v4"/></symbol><symbol id="type4" viewBox="0 0 24 24"><path d="M4 4h7a3 3 0 0 1 1 1v15a3 3 0 0 0-3-2H4zM20 4h-7a3 3 0 0 0-1 1v15a3 3 0 0 1 3-2h5z"/></symbol><symbol id="type5" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></symbol></svg>
+<div id="bandeauHorsLigne">Hors ligne · dernier fil consulté affiché</div><div id="app"></div><nav id="barreOnglets" hidden></nav>
+<script>
+const choisir = (selecteur) => document.querySelector(selecteur);
+const conteneur = choisir('#app'), barreOnglets = choisir('#barreOnglets');
+const TYPES = ['Emploi', 'Stage', 'Petit boulot', 'Mission en ligne', 'Formation', 'Financement'];
+const VILLES = ['Cocody', 'Yopougon', 'Abobo', 'Plateau'];
+const DISPONIBILITES = ['Temps plein', 'Soir & week-end', 'Flexible'];
+const COMPETENCES = ['Canva', 'Saisie', 'Langues', 'Réseaux sociaux', 'Bricolage', 'Cuisine', 'Vente'];
+const STATUTS = { VERIFIEE: ['coche', 'VÉRIFIÉE', 'verifiee'], A_VERIFIER: ['alerte', 'À VÉRIFIER', 'a-verifier'], SIGNALEE: ['drapeau', 'SIGNALÉE', 'signalee'] };
+const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const icone = (nom) => `<svg class="icone"><use href="#${nom}"/></svg>`;
+const badgeStatut = (statut) => { const [nomIcone, libelle, classe] = STATUTS[statut]; return `<span class="badge ${classe}">${icone(nomIcone)}${libelle}</span>`; };
+
+const etat = {
+  jeton: localStorage.jeton || '', prenom: localStorage.prenom || '', role: localStorage.role || '',
+  filtres: { type: '', ville: '', disponibilite: '', recherche: '' },
+  telephone: '', codeDev: '', competences: [], profondeur: 0, page: 'accueil',
+};
+let minuterie;
+const arreterMinuterie = () => clearInterval(minuterie);
+
+async function appelerApi(chemin, options = {}) {
+  const reponse = await fetch('/api' + chemin, {
+    method: options.methode || 'GET',
+    headers: { 'Content-Type': 'application/json', ...(etat.jeton ? { Authorization: 'Bearer ' + etat.jeton } : {}) },
+    body: options.corps && JSON.stringify(options.corps),
+  });
+  const donnees = await reponse.json().catch(() => ({}));
+  if (reponse.status === 401 && etat.jeton) { localStorage.removeItem('jeton'); etat.jeton = ''; afficherConnexion(); }
+  if (!reponse.ok) throw new Error(donnees.error || 'Erreur');
+  return donnees;
+}
+
+// ---------- éléments communs ----------
+const retourArriere = () => (etat.profondeur > 0 ? history.back() : aller('accueil'));
+const boutonCloche = () => `<button class="bouton-rond" onclick="aller('notifications')" aria-label="Notifications">${icone('cloche')}<i id="pastille" hidden></i></button>`;
+const enTete = (titre, droite = '') => `<div class="entete"><button class="bouton-rond" onclick="retourArriere()" aria-label="Retour">${icone('retour')}</button><div class="entete-titre">${titre}</div>${droite}</div>`;
+const barreRecherche = () => `<div class="recherche">${icone('loupe')}<input id="recherche" value="${echapper(etat.filtres.recherche)}" placeholder="Rechercher une offre" enterkeyhint="search"></div>`;
+const brancherRecherche = () => {
+  choisir('#recherche').onkeydown = (evenement) => {
+    if (evenement.key !== 'Enter') return;
+    etat.filtres.recherche = evenement.target.value.trim();
+    aller('offres', null, etat.page === 'offres');
+  };
+};
+const carteOffre = (offre) => `<button class="carte" onclick="aller('fiche',${offre.id})">${badgeStatut(offre.status)}<div class="carte-titre">${echapper(offre.title)}</div><div class="discret">${echapper(offre.type)} · ${echapper(offre.city)} · ${echapper(offre.availability)}</div><div class="discret">${new Date(offre.created_at).toLocaleDateString('fr-FR')}${offre.reports ? ' · ' + offre.reports + ' signalement' + (offre.reports > 1 ? 's' : '') : ''}</div></button>`;
+const afficherOnglets = (actif) => {
+  barreOnglets.hidden = !actif;
+  barreOnglets.innerHTML = [['accueil', 'Accueil', 'accueil'], ['offres', 'Offres', 'liste'], ['profil', 'Profil', 'profil']]
+    .map(([page, libelle, nomIcone]) => `<button class="${page === actif ? 'actif' : ''}" onclick="aller('${page}')">${icone(nomIcone)}${libelle}</button>`).join('');
+};
+const verifierNotifications = () => appelerApi('/me/notifications').then((notifications) => {
+  const pastille = choisir('#pastille');
+  if (pastille && notifications.length && new Date(notifications[0].at).getTime() > +(localStorage.derniereLecture || 0)) pastille.hidden = false;
+}).catch(() => {});
+
+// ---------- navigation (compatible avec le bouton retour du téléphone) ----------
+const PAGES = {};
+async function aller(page, argument, sansHistorique) {
+  arreterMinuterie();
+  if (!sansHistorique) { history.pushState({ page, argument }, ''); etat.profondeur++; }
+  etat.page = page; window.scrollTo(0, 0);
+  try { await PAGES[page](argument); }
+  catch (erreur) { conteneur.innerHTML = enTete('') + `<p class="erreur">${echapper(erreur.message)}</p>`; }
+}
+addEventListener('popstate', (evenement) => {
+  etat.profondeur = Math.max(0, etat.profondeur - 1);
+  const dest = evenement.state || { page: 'accueil' };
+  aller(dest.page, dest.argument, true);
+});
+
+// ---------- écrans ----------
+function afficherConnexion() {
+  arreterMinuterie(); afficherOnglets();
+  conteneur.innerHTML = `<div class="bandeau"><div class="logo">J</div><h1>Trouve une offre fiable.<br>Évite les arnaques.</h1><div class="discret">Emplois, stages, missions et formations à Abidjan.</div></div>
+<div class="etiquette" style="margin-top:28px">Numéro de téléphone</div><input id="telephone" type="tel" inputmode="tel" placeholder="07 00 00 00 00" autocomplete="tel"><div class="etiquette">Prénom</div><input id="prenom" placeholder="Aya">
+<label class="discret" style="display:flex;gap:10px;margin-top:16px;align-items:center"><input id="conditions" type="checkbox" style="width:22px;min-height:22px">J'accepte les conditions d'utilisation et la politique de confidentialité</label>
+<button class="bouton-principal" id="envoyer">Recevoir mon code SMS</button><p class="discret" style="text-align:center">Gratuit. Aucun e-mail demandé.</p><div id="erreur" class="erreur"></div>`;
+  choisir('#envoyer').onclick = async () => {
+    try {
+      if (!choisir('#conditions').checked) throw new Error("Merci d'accepter les conditions");
+      etat.telephone = choisir('#telephone').value; etat.prenom = choisir('#prenom').value;
+      const reponse = await appelerApi('/auth/otp/request', { methode: 'POST', corps: { phone: etat.telephone } });
+      etat.codeDev = reponse.dev_code || ''; aller('code');
+    } catch (erreur) { choisir('#erreur').textContent = erreur.message; }
+  };
+}
+PAGES.connexion = afficherConnexion;
+
+PAGES.code = () => {
+  let secondesRestantes = 60; afficherOnglets();
+  conteneur.innerHTML = `${enTete('Code SMS')}<h1>Entre ton code</h1><div class="discret">Envoyé au ${echapper(etat.telephone)}</div>${etat.codeDev ? `<div class="discret">(mode dév. : ${etat.codeDev})</div>` : ''}
+<input id="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="font-size:28px;letter-spacing:10px;text-align:center;margin-top:20px"><div id="compteRebours" class="discret" style="text-align:center;margin-top:16px;min-height:48px"></div><button class="bouton-principal" id="valider" style="margin-top:4px">Valider</button><div id="erreur" class="erreur"></div>`;
+  const mettreAJourCompteRebours = () => {
+    const zone = choisir('#compteRebours'); if (!zone) return arreterMinuterie();
+    if (secondesRestantes > 0) { zone.textContent = 'Renvoyer le code dans ' + Math.floor(secondesRestantes / 60) + ':' + String(secondesRestantes % 60).padStart(2, '0'); secondesRestantes--; return; }
+    arreterMinuterie();
+    zone.innerHTML = '<button class="lien-action" style="color:#0F0F0F;margin:0" id="renvoyer">Renvoyer le code</button>';
+    choisir('#renvoyer').onclick = async () => {
+      try { const reponse = await appelerApi('/auth/otp/request', { methode: 'POST', corps: { phone: etat.telephone } }); etat.codeDev = reponse.dev_code || ''; PAGES.code(); }
+      catch (erreur) { choisir('#erreur').textContent = erreur.message; }
+    };
+  };
+  mettreAJourCompteRebours(); minuterie = setInterval(mettreAJourCompteRebours, 1000);
+  choisir('#valider').onclick = async () => {
+    try {
+      const reponse = await appelerApi('/auth/otp/verify', { methode: 'POST', corps: { phone: etat.telephone, name: etat.prenom, code: choisir('#code').value } });
+      etat.jeton = localStorage.jeton = reponse.token; etat.prenom = localStorage.prenom = reponse.user.name || ''; etat.role = localStorage.role = reponse.user.role;
+      history.replaceState({ page: 'accueil' }, ''); etat.profondeur = 0; aller('accueil', null, true);
+    } catch (erreur) { choisir('#erreur').textContent = erreur.message; }
+  };
+};
+
+PAGES.accueil = () => {
+  if (!etat.jeton) return afficherConnexion();
+  afficherOnglets('accueil'); etat.filtres.recherche = '';
+  conteneur.innerHTML = `<div class="entete"><div><div class="discret">Bonjour ${echapper(etat.prenom)}</div><h1 style="margin:0">Je cherche…</h1></div>${boutonCloche()}</div>${barreRecherche()}
+<div class="grille">${TYPES.map((type, i) => `<button class="tuile" data-type="${type}">${icone('type' + i)}${type}</button>`).join('')}</div>
+<div class="carte-noire"><div style="font-weight:800">5 missions pour toi cette semaine</div><div class="discret" style="margin:4px 0 12px;color:#B8B3AB">Selon tes compétences</div><button class="bouton-principal" onclick="aller('profil','suggestions')">Voir mes missions</button></div>`;
+  document.querySelectorAll('[data-type]').forEach((bouton) => bouton.onclick = () => { etat.filtres.type = bouton.dataset.type; etat.filtres.recherche = ''; aller('offres'); });
+  brancherRecherche(); verifierNotifications();
+};
+
+PAGES.offres = async () => {
+  if (!etat.jeton) return afficherConnexion();
+  afficherOnglets('offres');
+  const { type, ville, disponibilite, recherche } = etat.filtres;
+  const parametres = new URLSearchParams(Object.entries({ type, city: ville, availability: disponibilite, q: recherche }).filter(([, valeur]) => valeur)).toString();
+  let offres;
+  try { offres = await appelerApi('/opportunities?' + parametres); localStorage.dernierFil = JSON.stringify(offres); }
+  catch (erreur) { if (navigator.onLine) throw erreur; offres = JSON.parse(localStorage.dernierFil || '[]'); }
+  const puces = (cle, valeurs) => valeurs.map((valeur) => `<button class="puce ${etat.filtres[cle] === valeur ? 'actif' : ''}" data-filtre="${cle}" data-valeur="${valeur}">${valeur}</button>`).join('');
+  conteneur.innerHTML = `${enTete('Offres', boutonCloche())}${barreRecherche()}<div class="discret">${offres.length} offre${offres.length > 1 ? 's' : ''} · les plus récentes d'abord</div>
+<div class="etiquette">Type</div><div class="puces">${puces('type', TYPES)}</div><div class="etiquette">Ville</div><div class="puces">${puces('ville', VILLES)}</div><div class="etiquette">Disponibilité</div><div class="puces">${puces('disponibilite', DISPONIBILITES)}</div>
+<div style="height:14px"></div>${offres.map(carteOffre).join('') || '<p class="discret">Aucune offre pour ces filtres.</p>'}`;
+  document.querySelectorAll('[data-filtre]').forEach((bouton) => bouton.onclick = () => {
+    const { filtre, valeur } = bouton.dataset; etat.filtres[filtre] = etat.filtres[filtre] === valeur ? '' : valeur; aller('offres', null, true);
+  });
+  brancherRecherche(); verifierNotifications();
+};
+
+PAGES.fiche = async (idOffre) => {
+  const offre = await appelerApi('/opportunities/' + idOffre); afficherOnglets();
+  const [classeNote, texteNote] = { VERIFIEE: ['verifiee', "Source confirmée par l'équipe JOKO."], A_VERIFIER: ['a-verifier', 'Informations en cours de vérification. Ne payez jamais pour postuler.'], SIGNALEE: ['signalee', 'Offre signalée. Ne payez rien.'] }[offre.status];
+  const boutonContact = offre.contact
+    ? `<a class="bouton-principal" style="text-align:center;line-height:54px;text-decoration:none" href="${offre.contact.includes('@') ? 'mailto:' : 'tel:'}${echapper(offre.contact)}">Contacter l'offre</a>`
+    : `<button class="bouton-principal" disabled style="background:#E5E1DA;box-shadow:none;color:#6B6B6B">Contact désactivé</button>`;
+  conteneur.innerHTML = `${enTete('Offre')}<h1 style="font-size:24px">${echapper(offre.title)}</h1>${badgeStatut(offre.status)}<div class="note ${classeNote}">${texteNote}</div>
+<div class="ligne">${icone('lieu')}${echapper(offre.city)} · ${echapper(offre.type)}</div><div class="ligne">${icone('horloge')}${echapper(offre.availability)}</div><p>${echapper(offre.description)}</p>
+<div class="etiquette">Signalements liés</div>${offre.reports.map((signalement) => `<div class="ligne" style="color:#B3261E">${icone('alerte')}${echapper(signalement.kind)}${signalement.amount ? ' · ' + signalement.amount + ' FCFA' : ''}</div>`).join('') || '<div class="discret">Aucun signalement.</div>'}
+${boutonContact}<button class="lien-action" onclick="aller('signalement',${offre.id})">Signaler un problème</button>`;
+};
+
+PAGES.signalement = (idOffre) => {
+  afficherOnglets(); let typeProbleme = '';
+  conteneur.innerHTML = `${enTete('Signaler un problème')}<h1 style="font-size:24px">Que s'est-il passé ?</h1>${['Argent demandé', 'Offre fictive', 'Contact injoignable'].map((type) => `<button class="choix" data-probleme="${type}">${type}</button>`).join('')}
+<div id="zoneMontant" hidden><div class="etiquette">Montant demandé (FCFA)</div><input id="montant" type="number" inputmode="numeric"></div><button class="bouton-principal" id="envoyer" disabled>Envoyer le signalement</button>`;
+  document.querySelectorAll('.choix').forEach((bouton) => bouton.onclick = () => {
+    typeProbleme = bouton.dataset.probleme;
+    document.querySelectorAll('.choix').forEach((autre) => autre.classList.toggle('actif', autre === bouton));
+    choisir('#zoneMontant').hidden = typeProbleme !== 'Argent demandé'; choisir('#envoyer').disabled = false;
+  });
+  choisir('#envoyer').onclick = async () => {
+    const signalement = { opportunity_id: idOffre, kind: typeProbleme, amount: choisir('#montant').value || null };
+    try { await appelerApi('/reports', { methode: 'POST', corps: signalement }); afficherConfirmation(false); }
+    catch (erreur) {
+      if (navigator.onLine) return alert(erreur.message);
+      localStorage.signalementsEnAttente = JSON.stringify([...JSON.parse(localStorage.signalementsEnAttente || '[]'), signalement]); afficherConfirmation(true);
+    }
+  };
+};
+
+function afficherConfirmation(horsLigne) {
+  afficherOnglets(); history.replaceState({ page: 'offres' }, '');
+  conteneur.innerHTML = `<div style="text-align:center;padding-top:90px"><div style="width:96px;height:96px;border-radius:48px;background:#E3F4EA;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;color:#2E9E5B"><svg class="icone" style="width:40px;height:40px;stroke-width:3"><use href="#coche"/></svg></div><h1>Merci !</h1><p class="discret" style="font-size:16px">Un modérateur va examiner ton signalement.</p>${horsLigne ? '<div class="note a-verifier">Hors ligne : ton signalement partira dès le retour du réseau.</div>' : ''}<button class="bouton-principal" onclick="aller('offres')">Retour aux offres</button></div>`;
+}
+
+PAGES.notifications = async () => {
+  afficherOnglets(); const notifications = await appelerApi('/me/notifications'); localStorage.derniereLecture = Date.now();
+  conteneur.innerHTML = `${enTete('Notifications')}${notifications.map((notification) => `<button class="carte ligne-notif" onclick="aller('fiche',${notification.id})"><span class="point" style="background:${notification.t.startsWith('Nouvelle') ? '#0F0F0F' : '#2E9E5B'}"></span><div><div class="carte-titre" style="margin:0">${echapper(notification.t)}</div><div class="discret">${echapper(notification.d)} · ${new Date(notification.at).toLocaleDateString('fr-FR')}</div></div></button>`).join('') || '<p class="discret">Aucune notification pour le moment.</p>'}`;
+};
+
+PAGES.profil = async (mode) => {
+  afficherOnglets('profil'); etat.competences = await appelerApi('/me/skills');
+  const suggestions = mode === 'suggestions' ? await appelerApi('/me/suggestions') : null;
+  conteneur.innerHTML = `${enTete('Mon profil', boutonCloche())}<div class="discret">${echapper(etat.prenom)}</div><div class="etiquette">Mes compétences</div><div class="puces">${COMPETENCES.map((c) => `<button class="puce ${etat.competences.includes(c) ? 'actif' : ''}" data-competence="${c}">${c}</button>`).join('')}</div>
+<button class="bouton-principal" id="voirMissions">Voir 5 missions pour moi</button>${suggestions ? `<div class="etiquette">Pour toi cette semaine</div>${suggestions.map(carteOffre).join('')}` : ''}
+${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="display:block;text-align:center;color:#0F0F0F" href="/admin.html">Back-office</a>' : ''}<button class="lien-action" onclick="localStorage.clear();location.href='/'" style="color:#6B6B6B">Se déconnecter</button>`;
+  document.querySelectorAll('[data-competence]').forEach((bouton) => bouton.onclick = async () => {
+    const competence = bouton.dataset.competence;
+    etat.competences = etat.competences.includes(competence) ? etat.competences.filter((c) => c !== competence) : [...etat.competences, competence];
+    await appelerApi('/me/skills', { methode: 'PUT', corps: { skills: etat.competences } }); bouton.classList.toggle('actif');
+  });
+  choisir('#voirMissions').onclick = () => aller('profil', 'suggestions', true); verifierNotifications();
+};
+
+// ---------- hors ligne : renvoi automatique des signalements en attente ----------
+async function renvoyerSignalementsEnAttente() {
+  const enAttente = JSON.parse(localStorage.signalementsEnAttente || '[]'); if (!enAttente.length || !etat.jeton) return;
+  const restants = [];
+  for (const signalement of enAttente) { try { await appelerApi('/reports', { methode: 'POST', corps: signalement }); } catch { restants.push(signalement); } }
+  localStorage.signalementsEnAttente = JSON.stringify(restants);
+}
+const majReseau = () => { choisir('#bandeauHorsLigne').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine) renvoyerSignalementsEnAttente(); };
+addEventListener('online', majReseau); addEventListener('offline', majReseau); majReseau();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+history.replaceState({ page: 'accueil' }, '');
+etat.jeton ? PAGES.accueil() : afficherConnexion();
+</script></body></html>

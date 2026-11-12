@@ -1,0 +1,7 @@
+create table if not exists users(id serial primary key,phone_hash text unique not null,phone_enc text not null,name text,role text not null default 'user' check(role in('user','recruiter','moderator','admin')),suspended boolean not null default false,created_at timestamptz default now());
+create table if not exists otps(phone_hash text primary key,code_hash text not null,expires_at timestamptz not null,attempts int not null default 0);
+create table if not exists opportunities(id serial primary key,title text not null,type text not null,city text not null,availability text not null default 'Flexible',description text,contact text,source text,status text not null default 'A_VERIFIER' check(status in('VERIFIEE','A_VERIFIER','SIGNALEE')),moderation text not null default 'pending' check(moderation in('pending','approved','rejected','needs_info')),created_at timestamptz default now());
+create table if not exists reports(id serial primary key,opportunity_id int references opportunities(id),user_id int references users(id),kind text not null,amount int,confirmed boolean,created_at timestamptz default now(),decided_at timestamptz,unique(opportunity_id,user_id));
+create table if not exists mod_log(id serial primary key,moderator_id int,object text,decision text,reason text,created_at timestamptz default now());
+create table if not exists user_skills(user_id int references users(id),skill text,primary key(user_id,skill));
+create index if not exists idx_opp on opportunities(moderation,created_at desc);
