@@ -165,6 +165,7 @@ appli.get('/api/admin/dashboard', exigerModerateur, gererErreurs(async (requete,
 })));
 
 const PORT = process.env.PORT || 3000;
-bdd.query('select 1').then(() => console.log('Base de données connectée ✔'))
+bdd.query(require('fs').readFileSync(chemin.join(__dirname, 'schema.sql'), 'utf8'))
+  .then(() => console.log('Base de données connectée ✔ (tables vérifiées)'))
   .catch((erreur) => console.error('ERREUR : connexion à la base impossible →', erreur.message));
 appli.listen(PORT, () => console.log('JOKO prêt sur http://localhost:' + PORT));
