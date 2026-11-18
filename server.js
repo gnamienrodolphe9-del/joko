@@ -27,6 +27,7 @@ const normaliserTelephone = (saisie) => {
 const envoyerSms = async (telephone, message) => console.log('[SMS]', telephone, message); // À remplacer par la passerelle SMS
 
 const appli = express();
+appli.set('trust proxy', 1); // Railway place un intermédiaire devant le serveur
 appli.use(helmet({ contentSecurityPolicy: false }), express.json({ limit: '20kb' }), express.static(chemin.join(__dirname, 'public')));
 appli.use('/api', limiteur({ windowMs: 60000, max: 120 }));
 const limiteCodeSms = limiteur({ windowMs: 60000, max: 5, message: { error: 'Trop de demandes, réessayez dans 1 minute' } });
