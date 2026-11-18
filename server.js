@@ -11,6 +11,7 @@ if (!process.env.DATABASE_URL) {
 const bdd = new Pool({ connectionString: process.env.DATABASE_URL });
 const SECRET_JWT = process.env.JWT_SECRET || 'secret-de-developpement';
 const SEUIL_SIGNALEMENTS = +process.env.SEUIL || 3; // signalements confirmés avant statut SIGNALÉE
+const AFFICHER_CODE_TEST = process.env.AFFICHER_CODE_TEST === 'true' || process.env.NODE_ENV !== 'production'; // mode test : le code SMS s'affiche à l'écran
 const CLE_CHIFFREMENT = crypto.createHash('sha256').update(process.env.PHONE_KEY || 'cle-de-developpement').digest();
 
 const hacher = (texte) => crypto.createHmac('sha256', CLE_CHIFFREMENT).update(texte).digest('hex');
@@ -53,7 +54,7 @@ appli.post('/api/auth/otp/request', limiteCodeSms, gererErreurs(async (requete, 
   await bdd.query("insert into otps values($1,$2,now()+interval '5 minutes',0) on conflict(phone_hash) do update set code_hash=$2,expires_at=now()+interval '5 minutes',attempts=0",
     [hacher(telephone), hacher(telephone + code)]);
   await envoyerSms(telephone, `JOKO : votre code est ${code}`);
-  reponse.json({ ok: true, ...(process.env.NODE_ENV !== 'production' && { dev_code: code }) });
+  reponse.json({ ok: true, ...(AFFICHER_CODE_TEST && { dev_code: code }) });
 }));
 
 appli.post('/api/auth/otp/verify', limiteCodeSms, gererErreurs(async (requete, reponse) => {

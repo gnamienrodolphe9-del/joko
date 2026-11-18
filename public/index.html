@@ -569,7 +569,7 @@
 
     PAGES.code = () => {
       let secondesRestantes = 60; afficherOnglets();
-      conteneur.innerHTML = `${enTete('Code SMS')}<h1>Entre ton code</h1><div class="discret">Envoyé au ${echapper(etat.telephone)}</div>${etat.codeDev ? `<div class="discret">(mode dév. : ${etat.codeDev})</div>` : ''}
+      conteneur.innerHTML = `${enTete('Code SMS')}<h1>Entre ton code</h1><div class="discret">Envoyé au ${echapper(etat.telephone)}</div>${etat.codeDev ? `<div class="note a-verifier">Mode test : ton code est <b style="font-size:22px;letter-spacing:3px">${etat.codeDev}</b></div>` : ''}
 <input id="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="font-size:28px;letter-spacing:10px;text-align:center;margin-top:20px"><div id="compteRebours" class="discret" style="text-align:center;margin-top:16px;min-height:48px"></div><button class="bouton-principal" id="valider" style="margin-top:4px">Valider</button><div id="erreur" class="erreur"></div>`;
       const mettreAJourCompteRebours = () => {
         const zone = choisir('#compteRebours'); if (!zone) return arreterMinuterie();
