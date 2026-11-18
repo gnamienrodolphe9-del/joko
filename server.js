@@ -167,7 +167,17 @@ appli.get('/api/admin/dashboard', exigerModerateur, gererErreurs(async (requete,
 })));
 
 const PORT = process.env.PORT || 3000;
-bdd.query(require('fs').readFileSync(chemin.join(__dirname, 'schema.sql'), 'utf8'))
-  .then(() => console.log('Base de données connectée ✔ (tables vérifiées)'))
-  .catch((erreur) => console.error('ERREUR : connexion à la base impossible →', erreur.message));
+const fs = require('fs');
+bdd.query(fs.readFileSync(chemin.join(__dirname, 'schema.sql'), 'utf8'))
+  .then(async () => {
+    console.log('Base de données connectée ✔ (tables vérifiées)');
+    if (process.env.CHARGER_OFFRES_TEST === 'true') {
+      const { n: nombreOffres } = (await bdd.query('select count(*)::int n from opportunities')).rows[0];
+      if (nombreOffres === 0) {
+        await bdd.query(fs.readFileSync(chemin.join(__dirname, 'seed.sql'), 'utf8'));
+        console.log('Offres de test chargées ✔');
+      }
+    }
+  })
+  .catch((erreur) => console.error('ERREUR : connexion à la base impossible →', erreur.message || erreur.code));
 appli.listen(PORT, () => console.log('JOKO prêt sur http://localhost:' + PORT));
