@@ -48,8 +48,15 @@ Avant d'ouvrir au public : brancher la passerelle SMS dans la fonction `envoyerS
 
 ## Espace recruteur et candidatures
 - Le rôle (« Je cherche du travail » ou « Je recrute ») est choisi à la connexion, à la création du compte, puis il est fixe.
-- Un recruteur ne voit que ses propres offres, jamais celles des autres recruteurs.
+- Un recruteur a sa propre interface (Accueil, Mes offres, Profil) et ne voit que ses propres offres, jamais celles des autres recruteurs ni celles de l'équipe.
+- Le rôle est relu dans la base à chaque requête : un changement de rôle ou une suspension s'applique tout de suite.
 - Un recruteur publie une offre avec son contrat : Journée, Plusieurs jours, CDD, CDI ou À la tâche, plus durée et rémunération.
 - Toute offre reste « en attente de validation » jusqu'à la validation d'un modérateur (back-office).
 - Un chercheur postule en un geste ; le recruteur voit prénom, compétences et numéro des candidats de ses offres uniquement.
 - Le recruteur peut clôturer une offre : elle disparaît du fil et n'accepte plus de candidatures.
+
+## Installation sur l'écran d'accueil (PWA)
+- À l'ouverture du lien, Chrome (Android, ordinateur) déclenche une invitation « Installe JOKO » avec un bouton Installer. Sur iPhone (Safari), elle explique le geste Partager > Sur l'écran d'accueil.
+- Condition : adresse en HTTPS (Railway) ou localhost. Si l'invitation est fermée ou refusée, elle revient après 7 jours.
+- Fichiers : public/manifest.json, public/sw.js (service worker), icônes public/icon-192.png, icon-512.png, icon-maskable-512.png, icon-180.png.
+- Pour la revoir pendant les tests : console du navigateur > `localStorage.removeItem('invitationReportee')`, puis recharger.

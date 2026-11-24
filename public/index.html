@@ -7,6 +7,12 @@
   <meta name="theme-color" content="#0F0F0F">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="description" content="Trouve une offre fiable et évite les arnaques à Abidjan.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="JOKO">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>JOKO</title>
   <style>
     * {
@@ -52,7 +58,7 @@
       border-radius: 14px;
       padding: 0 14px;
       font-size: 16px;
-      background:#fff9ef
+      background:#fff7ea
     }
 
     input:focus {
@@ -91,7 +97,7 @@
       height: 44px;
       border-radius: 22px;
       background: #fff;
-      border: 1px solid #f8ac28;
+      border: 1px solid #fca104;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -479,6 +485,64 @@
       font-size: 24px;
       color: #0F0F0F
     }
+
+    #invitationInstall {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 84px;
+      max-width: 456px;
+      margin: 0 auto;
+      background: #0F0F0F;
+      color: #fff;
+      border-radius: 18px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 20;
+      box-shadow: 0 8px 24px rgba(15, 15, 15, .3)
+    }
+
+    #invitationInstall .detail {
+      font-size: 13px;
+      color: #B8B3AB;
+      line-height: 1.35
+    }
+
+    .logo-mini {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #FFC400;
+      color: #0F0F0F;
+      font-weight: 800;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: none
+    }
+
+    .bouton-installer {
+      border: 0;
+      border-radius: 12px;
+      background: #F7941D;
+      color: #0F0F0F;
+      font: inherit;
+      font-weight: 800;
+      padding: 0 14px;
+      min-height: 44px
+    }
+
+    .bouton-fermer {
+      background: none;
+      border: 0;
+      color: #B8B3AB;
+      font-size: 18px;
+      min-width: 44px;
+      min-height: 44px
+    }
   </style>
 </head>
 
@@ -859,6 +923,28 @@ ${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="di
     }
     const majReseau = () => { choisir('#bandeauHorsLigne').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine) renvoyerSignalementsEnAttente(); };
     addEventListener('online', majReseau); addEventListener('offline', majReseau); majReseau();
+    // ---------- invitation à installer l'application sur l'écran d'accueil ----------
+    let invitationInstallation = null;
+    const dejaInstallee = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const invitationRecemmentRefusee = () => Date.now() - +(localStorage.invitationReportee || 0) < 7 * 24 * 3600 * 1000; // on ne redemande pas avant 7 jours
+    function afficherInvitationInstallation(modeIphone) {
+      if (dejaInstallee() || invitationRecemmentRefusee() || choisir('#invitationInstall')) return;
+      const bandeau = document.createElement('div'); bandeau.id = 'invitationInstall';
+      bandeau.innerHTML = `<div class="logo-mini">J</div><div style="flex:1"><div style="font-weight:800">Installe JOKO</div><div class="detail">${modeIphone ? "Touche Partager, puis « Sur l'écran d'accueil »." : "Accès rapide depuis ton écran d'accueil, même avec une connexion faible."}</div></div>${modeIphone ? '' : '<button class="bouton-installer" id="installer">Installer</button>'}<button class="bouton-fermer" id="plusTard" aria-label="Fermer">✕</button>`;
+      document.body.appendChild(bandeau);
+      choisir('#plusTard').onclick = () => { localStorage.invitationReportee = Date.now(); bandeau.remove(); };
+      if (!modeIphone) choisir('#installer').onclick = async () => {
+        if (!invitationInstallation) return bandeau.remove();
+        invitationInstallation.prompt();
+        const choix = await invitationInstallation.userChoice;
+        invitationInstallation = null; bandeau.remove();
+        if (choix.outcome !== 'accepted') localStorage.invitationReportee = Date.now();
+      };
+    }
+    addEventListener('beforeinstallprompt', (evenement) => { evenement.preventDefault(); invitationInstallation = evenement; afficherInvitationInstallation(false); });
+    addEventListener('appinstalled', () => { invitationInstallation = null; const bandeau = choisir('#invitationInstall'); if (bandeau) bandeau.remove(); });
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent)) setTimeout(() => afficherInvitationInstallation(true), 1500); // iPhone : pas d'invitation automatique, on explique le geste
+
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
     async function synchroniserCompte() {
       try { const compte = await appelerApi('/me'); etat.role = localStorage.role = compte.role; etat.prenom = localStorage.prenom = compte.name || ''; etat.organisation = localStorage.organisation = compte.organization || ''; }
