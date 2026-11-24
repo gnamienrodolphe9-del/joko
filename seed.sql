@@ -6,3 +6,8 @@ insert into opportunities(title,type,city,availability,description,contact,sourc
 ('Livreur — week-ends','Petit boulot','Yopougon','Soir & week-end','Livraisons de proximité payées à la course.','+2250700000003','Veille','A_VERIFIER','approved'),
 ('Formation courte : comptabilité de base','Formation','Cocody','Soir & week-end','4 semaines de cours du soir.','+2250700000004','Partenaire','VERIFIEE','approved'),
 ('Bourse « Jeunes entrepreneurs »','Financement','Abobo','Flexible','Offre de financement.','+2250700000005','Veille','SIGNALEE','approved');
+
+update opportunities set contract_type='CDI',duration_text='',pay='' where title='Assistant(e) de saisie';
+update opportunities set contract_type='Journée',duration_text='2 jours',pay='10 000 FCFA au total' where title='Créer des visuels sur Canva';
+update opportunities set contract_type='CDD',duration_text='3 mois' where title='Stage en marketing digital';
+update opportunities set contract_type='À la tâche',pay='Payé à la course' where title like 'Livreur%';

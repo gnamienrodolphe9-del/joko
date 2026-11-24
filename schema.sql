@@ -5,3 +5,13 @@ create table if not exists reports(id serial primary key,opportunity_id int refe
 create table if not exists mod_log(id serial primary key,moderator_id int,object text,decision text,reason text,created_at timestamptz default now());
 create table if not exists user_skills(user_id int references users(id),skill text,primary key(user_id,skill));
 create index if not exists idx_opp on opportunities(moderation,created_at desc);
+
+-- Espace recruteur et candidatures (ajouts idempotents : sans danger à relancer)
+alter table users add column if not exists organization text;
+alter table opportunities add column if not exists contract_type text;
+alter table opportunities add column if not exists duration_text text;
+alter table opportunities add column if not exists pay text;
+alter table opportunities add column if not exists organization text;
+alter table opportunities add column if not exists posted_by int references users(id);
+alter table opportunities add column if not exists closed boolean not null default false;
+create table if not exists applications(id serial primary key,opportunity_id int references opportunities(id),user_id int references users(id),created_at timestamptz default now(),unique(opportunity_id,user_id));
