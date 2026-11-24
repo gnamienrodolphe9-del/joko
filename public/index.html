@@ -42,7 +42,7 @@ const badgeStatut = (statut) => { const [nomIcone, libelle, classe] = STATUTS[st
 const etat = {
   jeton: localStorage.jeton || '', prenom: localStorage.prenom || '', role: localStorage.role || '', organisation: localStorage.organisation || '',
   filtres: { type: '', ville: '', disponibilite: '', contrat: '', recherche: '' },
-  telephone: '', codeDev: '', competences: [], profondeur: 0, page: 'accueil',
+  telephone: '', codeDev: '', roleChoisi: 'user', organisationSaisie: '', competences: [], profondeur: 0, page: 'accueil',
 };
 let minuterie;
 const arreterMinuterie = () => clearInterval(minuterie);
@@ -103,16 +103,36 @@ function afficherConnexion() {
   arreterMinuterie(); afficherOnglets();
   conteneur.innerHTML = `<div class="bandeau"><div class="logo">J</div><h1>Trouve une offre fiable.<br>Évite les arnaques.</h1><div class="discret">Emplois, stages, missions et formations à Abidjan.</div></div>
 <div class="etiquette" style="margin-top:28px">Numéro de téléphone</div><input id="telephone" type="tel" inputmode="tel" placeholder="07 00 00 00 00" autocomplete="tel"><div class="etiquette">Prénom</div><input id="prenom" placeholder="Aya">
+<div class="etiquette">Je suis…</div><div class="puces"><button class="puce actif" data-role="user">Je cherche du travail</button><button class="puce" data-role="recruiter">Je recrute</button></div><div class="discret" style="margin-top:6px">Ce choix est définitif pour ce numéro.</div>
+<div id="zoneOrganisation" hidden><div class="etiquette">Organisation ou activité</div><input id="organisation" maxlength="80" placeholder="Ex. : Boutique Aya"></div>
 <label class="discret" style="display:flex;gap:10px;margin-top:16px;align-items:center"><input id="conditions" type="checkbox" style="width:22px;min-height:22px">J'accepte les conditions d'utilisation et la politique de confidentialité</label>
 <button class="bouton-principal" id="envoyer">Recevoir mon code SMS</button><p class="discret" style="text-align:center">Gratuit. Aucun e-mail demandé.</p><div id="erreur" class="erreur"></div>`;
+  etat.roleChoisi = 'user';
+  document.querySelectorAll('[data-role]').forEach((bouton) => bouton.onclick = () => {
+    etat.roleChoisi = bouton.dataset.role;
+    document.querySelectorAll('[data-role]').forEach((autre) => autre.classList.toggle('actif', autre === bouton));
+    choisir('#zoneOrganisation').hidden = etat.roleChoisi !== 'recruiter';
+  });
   choisir('#envoyer').onclick = async () => {
     try {
+      etat.organisationSaisie = choisir('#organisation').value.trim();
+      if (etat.roleChoisi === 'recruiter' && etat.organisationSaisie.length < 2) throw new Error("Indique le nom de ton organisation ou de ton activité");
       if (!choisir('#conditions').checked) throw new Error("Merci d'accepter les conditions");
       etat.telephone = choisir('#telephone').value; etat.prenom = choisir('#prenom').value;
       const reponse = await appelerApi('/auth/otp/request', { methode: 'POST', corps: { phone: etat.telephone } });
       etat.codeDev = reponse.dev_code || ''; aller('code');
     } catch (erreur) { choisir('#erreur').textContent = erreur.message; }
   };
+  // Mode développement (local uniquement) : connexion rapide sans SMS
+  appelerApi('/dev/disponible').then((dev) => {
+    if (!dev.actif) return;
+    conteneur.insertAdjacentHTML('beforeend', `<div class="note a-verifier" style="margin-top:24px"><b>Mode développement</b><br>Connexion rapide sans SMS (local uniquement)</div><button class="bouton-secondaire" data-dev="user">Entrer comme chercheur</button><button class="bouton-secondaire" data-dev="recruiter">Entrer comme recruteur</button><button class="bouton-secondaire" data-dev="admin">Entrer comme administrateur</button>`);
+    document.querySelectorAll('[data-dev]').forEach((bouton) => bouton.onclick = async () => {
+      const reponse = await appelerApi('/dev/connexion', { methode: 'POST', corps: { role: bouton.dataset.dev } });
+      etat.jeton = localStorage.jeton = reponse.token; etat.prenom = localStorage.prenom = reponse.user.name || ''; etat.role = localStorage.role = reponse.user.role; etat.organisation = localStorage.organisation = reponse.user.organization || '';
+      history.replaceState({ page: 'accueil' }, ''); etat.profondeur = 0; aller('accueil', null, true);
+    });
+  }).catch(() => {});
 }
 PAGES.connexion = afficherConnexion;
 
@@ -133,7 +153,7 @@ PAGES.code = () => {
   mettreAJourCompteRebours(); minuterie = setInterval(mettreAJourCompteRebours, 1000);
   choisir('#valider').onclick = async () => {
     try {
-      const reponse = await appelerApi('/auth/otp/verify', { methode: 'POST', corps: { phone: etat.telephone, name: etat.prenom, code: choisir('#code').value } });
+      const reponse = await appelerApi('/auth/otp/verify', { methode: 'POST', corps: { phone: etat.telephone, name: etat.prenom, code: choisir('#code').value, role: etat.roleChoisi, organization: etat.organisationSaisie } });
       etat.jeton = localStorage.jeton = reponse.token; etat.prenom = localStorage.prenom = reponse.user.name || ''; etat.role = localStorage.role = reponse.user.role; etat.organisation = localStorage.organisation = reponse.user.organization || '';
       history.replaceState({ page: 'accueil' }, ''); etat.profondeur = 0; aller('accueil', null, true);
     } catch (erreur) { choisir('#erreur').textContent = erreur.message; }
@@ -221,8 +241,7 @@ PAGES.notifications = async () => {
 
 PAGES.profil = async (mode) => {
   afficherOnglets('profil');
-  const recruteur = etat.role === 'recruiter', peutChangerRole = ['user', 'recruiter'].includes(etat.role);
-  const choixRole = peutChangerRole ? `<div class="etiquette">Mon rôle</div><div class="puces"><button class="puce ${recruteur ? '' : 'actif'}" data-role="user">Je cherche du travail</button><button class="puce ${recruteur ? 'actif' : ''}" data-role="recruiter">Je recrute</button></div>` : '';
+  const recruteur = etat.role === 'recruiter';
   let corps;
   if (recruteur) {
     corps = `<div class="etiquette">${echapper(etat.organisation)}</div><button class="bouton-principal" onclick="aller('publier')">Publier une offre</button><button class="bouton-secondaire" onclick="aller('mesoffres')">Mes offres</button>`;
@@ -234,18 +253,8 @@ PAGES.profil = async (mode) => {
 <button class="bouton-principal" id="voirMissions">Voir 5 missions pour moi</button>${suggestions ? `<div class="etiquette">Pour toi cette semaine</div>${suggestions.map(carteOffre).join('')}` : ''}
 ${candidatures.length ? `<div class="etiquette">Mes candidatures</div>${candidatures.map(carteOffre).join('')}` : ''}`;
   }
-  conteneur.innerHTML = `${enTete('Mon profil', boutonCloche())}<div class="discret">${echapper(etat.prenom)}</div>${choixRole}${corps}
+  conteneur.innerHTML = `${enTete('Mon profil', boutonCloche())}<div class="discret">${echapper(etat.prenom)}</div>${corps}
 ${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="display:block;text-align:center;color:#0F0F0F" href="/admin.html">Back-office</a>' : ''}<button class="lien-action" onclick="localStorage.clear();location.href='/'" style="color:#6B6B6B">Se déconnecter</button>`;
-  document.querySelectorAll('[data-role]').forEach((bouton) => bouton.onclick = async () => {
-    const nouveauRole = bouton.dataset.role; if (nouveauRole === etat.role) return;
-    let organisation = '';
-    if (nouveauRole === 'recruiter') { organisation = prompt('Nom de ton organisation ou de ton activité ?', etat.organisation || ''); if (!organisation) return; }
-    try {
-      const reponse = await appelerApi('/me/role', { methode: 'PUT', corps: { role: nouveauRole, organization: organisation } });
-      etat.jeton = localStorage.jeton = reponse.token; etat.role = localStorage.role = reponse.user.role; etat.organisation = localStorage.organisation = reponse.user.organization || '';
-      aller('profil', null, true);
-    } catch (erreur) { alert(erreur.message); }
-  });
   document.querySelectorAll('[data-competence]').forEach((bouton) => bouton.onclick = async () => {
     const competence = bouton.dataset.competence;
     etat.competences = etat.competences.includes(competence) ? etat.competences.filter((c) => c !== competence) : [...etat.competences, competence];

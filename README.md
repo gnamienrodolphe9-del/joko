@@ -43,10 +43,12 @@ Avant d'ouvrir au public : brancher la passerelle SMS dans la fonction `envoyerS
 | SEUIL | signalements confirmés avant le statut SIGNALÉE (3 par défaut) |
 | BDD_SSL | `true` si l'hébergeur exige SSL pour la base |
 | AFFICHER_CODE_TEST | `true` : le code SMS s'affiche à l'écran (mode test, sans fournisseur SMS) |
+| CONNEXION_RAPIDE | `true` UNIQUEMENT dans le .env local : boutons de connexion rapide sans SMS (jamais sur Railway) |
 | CHARGER_OFFRES_TEST | `true` : charge les offres d'exemple si la table est vide (à retirer avant l'ouverture au public) |
 
 ## Espace recruteur et candidatures
-- Un utilisateur choisit « Je cherche du travail » ou « Je recrute » dans l'onglet Profil.
+- Le rôle (« Je cherche du travail » ou « Je recrute ») est choisi à la connexion, à la création du compte, puis il est fixe.
+- Un recruteur ne voit que ses propres offres, jamais celles des autres recruteurs.
 - Un recruteur publie une offre avec son contrat : Journée, Plusieurs jours, CDD, CDI ou À la tâche, plus durée et rémunération.
 - Toute offre reste « en attente de validation » jusqu'à la validation d'un modérateur (back-office).
 - Un chercheur postule en un geste ; le recruteur voit prénom, compétences et numéro des candidats de ses offres uniquement.

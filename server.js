@@ -75,19 +75,41 @@ appli.post('/api/auth/otp/verify', limiteCodeSms, gererErreurs(async (requete, r
     await bdd.query('update otps set attempts=attempts+1 where phone_hash=$1', [hacher(telephone)]);
     return reponse.status(400).json({ error: 'Code incorrect' });
   }
+  // Le rôle (chercheur ou recruteur) est choisi à la création du compte, puis il est FIXE.
+  const roleChoisi = requete.body.role === 'recruiter' ? 'recruiter' : 'user';
+  const organisationChoisie = String(requete.body.organization || '').trim().slice(0, 80);
+  const compteExistant = (await bdd.query('select 1 from users where phone_hash=$1', [hacher(telephone)])).rows[0];
+  if (!compteExistant && roleChoisi === 'recruiter' && organisationChoisie.length < 2) return reponse.status(400).json({ error: "Indique le nom de ton organisation ou de ton activité" });
   await bdd.query('delete from otps where phone_hash=$1', [hacher(telephone)]);
-  const roleInitial = process.env.ADMIN_PHONE && normaliserTelephone(process.env.ADMIN_PHONE) === telephone ? 'admin' : 'user';
+  const roleInitial = process.env.ADMIN_PHONE && normaliserTelephone(process.env.ADMIN_PHONE) === telephone ? 'admin' : roleChoisi;
   const utilisateur = (await bdd.query(
-    "insert into users(phone_hash,phone_enc,name,role) values($1,$2,$3,$4) on conflict(phone_hash) do update set name=coalesce(nullif($3,''),users.name),role=case when $4='admin' then 'admin' else users.role end returning id,name,role,suspended,organization",
-    [hacher(telephone), chiffrer(telephone), String(requete.body.name || '').slice(0, 60), roleInitial])).rows[0];
+    "insert into users(phone_hash,phone_enc,name,role,organization) values($1,$2,$3,$4,$5) on conflict(phone_hash) do update set name=coalesce(nullif($3,''),users.name),role=case when $4='admin' then 'admin' else users.role end returning id,name,role,suspended,organization",
+    [hacher(telephone), chiffrer(telephone), String(requete.body.name || '').slice(0, 60), roleInitial, roleInitial === 'recruiter' ? organisationChoisie : null])).rows[0];
   if (utilisateur.suspended) return reponse.status(403).json({ error: 'Compte suspendu' });
   reponse.json({ token: jwt.sign({ id: utilisateur.id, role: utilisateur.role }, SECRET_JWT, { expiresIn: '7d' }), user: { name: utilisateur.name, role: utilisateur.role, organization: utilisateur.organization } });
 }));
 
+// ---------- MODE DÉVELOPPEMENT : connexion rapide sans SMS (LOCAL UNIQUEMENT) ----------
+// Actif seulement si CONNEXION_RAPIDE=true dans le .env local, hors production, ET si la requête vient de cet ordinateur.
+// Ne jamais ajouter CONNEXION_RAPIDE sur Railway.
+const connexionRapideAutorisee = (requete) => process.env.CONNEXION_RAPIDE === 'true' && process.env.NODE_ENV !== 'production'
+  && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(requete.socket.remoteAddress);
+appli.get('/api/dev/disponible', (requete, reponse) => reponse.json({ actif: connexionRapideAutorisee(requete) }));
+appli.post('/api/dev/connexion', gererErreurs(async (requete, reponse) => {
+  if (!connexionRapideAutorisee(requete)) return reponse.status(404).json({ error: 'Introuvable' });
+  const role = ['user', 'recruiter', 'admin'].includes(requete.body.role) ? requete.body.role : 'user';
+  const prenoms = { user: 'Aya (test)', recruiter: 'Recruteur (test)', admin: 'Admin (test)' };
+  const telephone = '+22500000000' + { user: '1', recruiter: '2', admin: '3' }[role];
+  const utilisateur = (await bdd.query('insert into users(phone_hash,phone_enc,name,role,organization) values($1,$2,$3,$4,$5) on conflict(phone_hash) do update set name=$3,role=$4,organization=$5 returning id,name,role,organization',
+    [hacher(telephone), chiffrer(telephone), prenoms[role], role, role === 'recruiter' ? 'Entreprise test' : null])).rows[0];
+  reponse.json({ token: jwt.sign({ id: utilisateur.id, role: utilisateur.role }, SECRET_JWT, { expiresIn: '7d' }), user: { name: utilisateur.name, role: utilisateur.role, organization: utilisateur.organization } });
+}));
+
 // ---------- F-02 / F-03 / F-04 Fil d'offres, statuts, fiche ----------
-appli.get('/api/opportunities', gererErreurs(async (requete, reponse) => {
+appli.get('/api/opportunities', exigerConnexion(), gererErreurs(async (requete, reponse) => {
   const conditions = ["o.moderation='approved'", 'not o.closed'], valeurs = [];
   const ajouterCondition = (sql, valeur) => { valeurs.push(valeur); conditions.push(sql.replace('?', '$' + valeurs.length)); };
+  if (requete.utilisateur.role === 'recruiter') ajouterCondition('o.posted_by=?', requete.utilisateur.id); // un recruteur ne voit que ses propres offres
   const { type, city, availability, contract, q: recherche, page } = requete.query;
   if (type) ajouterCondition('o.type=?', type);
   if (contract) ajouterCondition('o.contract_type=?', contract);
@@ -99,8 +121,9 @@ appli.get('/api/opportunities', gererErreurs(async (requete, reponse) => {
     `select o.id,o.title,o.type,o.city,o.availability,o.status,o.created_at,o.contract_type,o.duration_text,o.pay,o.organization,(select count(*) from reports r where r.opportunity_id=o.id)::int as reports from opportunities o where ${conditions.join(' and ')} order by o.created_at desc limit 20 offset ${decalage}`, valeurs)).rows);
 }));
 
-appli.get('/api/opportunities/:id', gererErreurs(async (requete, reponse) => {
-  const offre = (await bdd.query("select * from opportunities where id=$1 and moderation='approved'", [+requete.params.id])).rows[0];
+appli.get('/api/opportunities/:id', exigerConnexion(), gererErreurs(async (requete, reponse) => {
+  const estRecruteur = requete.utilisateur.role === 'recruiter';
+  const offre = (await bdd.query("select * from opportunities where id=$1 and moderation='approved' and ($2 or posted_by=$3)", [+requete.params.id, !estRecruteur, requete.utilisateur.id])).rows[0];
   if (!offre) return reponse.status(404).json({ error: 'Offre introuvable' });
   if (offre.status === 'SIGNALEE') offre.contact = null;
   offre.reports = (await bdd.query('select kind,amount,created_at from reports where opportunity_id=$1 order by created_at desc', [offre.id])).rows;
@@ -109,6 +132,7 @@ appli.get('/api/opportunities/:id', gererErreurs(async (requete, reponse) => {
 
 // ---------- F-05 Signalement ----------
 appli.post('/api/reports', exigerConnexion(), gererErreurs(async (requete, reponse) => {
+  if (requete.utilisateur.role === 'recruiter') return reponse.status(403).json({ error: "Réservé aux chercheurs d'emploi" });
   const { opportunity_id: idOffre, kind: typeProbleme, amount: montant } = requete.body;
   if (!['Argent demandé', 'Offre fictive', 'Contact injoignable'].includes(typeProbleme)) return reponse.status(400).json({ error: 'Type invalide' });
   const { n: signalementsDuJour } = (await bdd.query("select count(*)::int n from reports where user_id=$1 and created_at>now()-interval '1 day'", [requete.utilisateur.id])).rows[0];
@@ -127,12 +151,16 @@ appli.put('/api/me/skills', exigerConnexion(), gererErreurs(async (requete, repo
   reponse.json({ ok: true });
 }));
 appli.get('/api/me/suggestions', exigerConnexion(), gererErreurs(async (requete, reponse) => {
+  if (requete.utilisateur.role === 'recruiter') return reponse.json([]);
   const motifs = (await bdd.query('select skill from user_skills where user_id=$1', [requete.utilisateur.id])).rows.map((ligne) => `%${ligne.skill}%`);
   reponse.json((await bdd.query("select id,title,type,city,availability,status,created_at,contract_type,duration_text,pay,organization from opportunities where moderation='approved' and status<>'SIGNALEE' and not closed order by (title ilike any($1) or description ilike any($1)) desc,created_at desc limit 5", [motifs.length ? motifs : ['%']])).rows);
 }));
 
 // ---------- Notifications ----------
 appli.get('/api/me/notifications', exigerConnexion(), gererErreurs(async (requete, reponse) => {
+  if (requete.utilisateur.role === 'recruiter') { // un recruteur est prévenu des nouveaux candidats de SES offres
+    return reponse.json((await bdd.query("select o.id,'Nouveau candidat : '||coalesce(u.name,'Sans prénom') as t,o.title as d,a.created_at as at from applications a join opportunities o on o.id=a.opportunity_id join users u on u.id=a.user_id where o.posted_by=$1 and a.created_at>now()-interval '14 days' order by a.created_at desc limit 10", [requete.utilisateur.id])).rows);
+  }
   const nouvellesOffres = (await bdd.query("select id,'Nouvelle offre : '||title as t,type||' · '||city as d,created_at as at from opportunities where moderation='approved' and status<>'SIGNALEE' and created_at>now()-interval '14 days' order by created_at desc limit 5")).rows;
   const signalementsTraites = (await bdd.query("select r.opportunity_id as id,'Ton signalement a été traité' as t,o.title as d,r.decided_at as at from reports r join opportunities o on o.id=r.opportunity_id where r.user_id=$1 and r.decided_at is not null order by r.decided_at desc limit 5", [requete.utilisateur.id])).rows;
   reponse.json([...nouvellesOffres, ...signalementsTraites].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 10));
@@ -144,17 +172,6 @@ const TYPES_OFFRE = ['Emploi', 'Stage', 'Petit boulot', 'Mission en ligne', 'For
 const DISPONIBILITES = ['Temps plein', 'Soir & week-end', 'Flexible'];
 const exigerRecruteur = exigerConnexion(['recruiter', 'moderator', 'admin']);
 const texteCourt = (valeur, max) => String(valeur || '').trim().slice(0, max);
-
-// Passer de « je cherche du travail » à « je recrute » (et inversement)
-appli.put('/api/me/role', exigerConnexion(), gererErreurs(async (requete, reponse) => {
-  const nouveauRole = requete.body.role, organisation = texteCourt(requete.body.organization, 80);
-  if (!['user', 'recruiter'].includes(nouveauRole)) return reponse.status(400).json({ error: 'Rôle invalide' });
-  if (nouveauRole === 'recruiter' && organisation.length < 2) return reponse.status(400).json({ error: "Indique le nom de ton organisation ou de ton activité" });
-  const utilisateur = (await bdd.query("update users set role=$1,organization=$2 where id=$3 and role in ('user','recruiter') returning id,name,role,organization",
-    [nouveauRole, nouveauRole === 'recruiter' ? organisation : null, requete.utilisateur.id])).rows[0];
-  if (!utilisateur) return reponse.status(400).json({ error: 'Rôle non modifiable pour ce compte' });
-  reponse.json({ token: jwt.sign({ id: utilisateur.id, role: utilisateur.role }, SECRET_JWT, { expiresIn: '7d' }), user: { name: utilisateur.name, role: utilisateur.role, organization: utilisateur.organization } });
-}));
 
 // Publier une offre (elle reste « en attente » jusqu'à la validation d'un modérateur)
 appli.post('/api/recruiter/opportunities', exigerRecruteur, gererErreurs(async (requete, reponse) => {
@@ -188,6 +205,7 @@ appli.patch('/api/recruiter/opportunities/:id/close', exigerRecruteur, gererErre
 
 // Postuler à une offre (le prénom, les compétences et le numéro sont partagés avec le recruteur)
 appli.post('/api/opportunities/:id/apply', exigerConnexion(), gererErreurs(async (requete, reponse) => {
+  if (requete.utilisateur.role === 'recruiter') return reponse.status(403).json({ error: "Réservé aux chercheurs d'emploi" });
   const offre = (await bdd.query("select id,posted_by,status,closed from opportunities where id=$1 and moderation='approved'", [+requete.params.id])).rows[0];
   if (!offre || offre.closed || offre.status === 'SIGNALEE') return reponse.status(400).json({ error: "Cette offre n'accepte plus de candidatures" });
   if (offre.posted_by === requete.utilisateur.id) return reponse.status(400).json({ error: 'Tu ne peux pas postuler à ta propre offre' });
