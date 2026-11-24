@@ -48,11 +48,11 @@
     input {
       width: 100%;
       min-height: 54px;
-      border: 1.5px solid #f59d05;
+      border: 1.5px solid #f0a016;
       border-radius: 14px;
       padding: 0 14px;
       font-size: 16px;
-      background: #ffffff
+      background:#fff9ef
     }
 
     input:focus {
@@ -91,7 +91,7 @@
       height: 44px;
       border-radius: 22px;
       background: #fff;
-      border: 1px solid #E5E1DA;
+      border: 1px solid #f8ac28;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -457,6 +457,28 @@
       background: #E5E1DA;
       color: #0F0F0F
     }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px
+    }
+
+    .stat {
+      background: #fff;
+      border: 1px solid #E5E1DA;
+      border-radius: 14px;
+      padding: 12px 4px;
+      text-align: center;
+      font-size: 12px;
+      color: #6B6B6B
+    }
+
+    .stat b {
+      display: block;
+      font-size: 24px;
+      color: #0F0F0F
+    }
   </style>
 </head>
 
@@ -525,6 +547,7 @@
     const DISPONIBILITES = ['Temps plein', 'Soir & week-end', 'Flexible'];
     const CONTRATS = ['Journée', 'Plusieurs jours', 'CDD', 'CDI', 'À la tâche'];
     const ETATS_OFFRE = { pending: 'En attente de validation', approved: 'Publiée', rejected: 'Refusée', needs_info: 'Complément demandé' };
+    const LIBELLES_ROLE = { user: "Chercheur d'emploi", recruiter: 'Recruteur', moderator: 'Modérateur', admin: 'Administrateur' };
     const COMPETENCES = ['Canva', 'Saisie', 'Langues', 'Réseaux sociaux', 'Bricolage', 'Cuisine', 'Vente'];
     const STATUTS = { VERIFIEE: ['coche', 'VÉRIFIÉE', 'verifiee'], A_VERIFIER: ['alerte', 'À VÉRIFIER', 'a-verifier'], SIGNALEE: ['drapeau', 'SIGNALÉE', 'signalee'] };
     const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -567,7 +590,7 @@
     const carteOffre = (offre) => `<button class="carte" onclick="aller('fiche',${offre.id})">${badgeStatut(offre.status)}<div class="carte-titre">${echapper(offre.title)}</div><div class="discret">${echapper(offre.type)} · ${echapper(offre.city)} · ${echapper(offre.availability)}</div>${ligneContrat(offre)}<div class="discret">${new Date(offre.created_at).toLocaleDateString('fr-FR')}${offre.reports ? ' · ' + offre.reports + ' signalement' + (offre.reports > 1 ? 's' : '') : ''}</div></button>`;
     const afficherOnglets = (actif) => {
       barreOnglets.hidden = !actif;
-      barreOnglets.innerHTML = [['accueil', 'Accueil', 'accueil'], ['offres', 'Offres', 'liste'], ['profil', 'Profil', 'profil']]
+      barreOnglets.innerHTML = (etat.role === 'recruiter' ? [['accueil', 'Accueil', 'accueil'], ['mesoffres', 'Mes offres', 'liste'], ['profil', 'Profil', 'profil']] : [['accueil', 'Accueil', 'accueil'], ['offres', 'Offres', 'liste'], ['profil', 'Profil', 'profil']])
         .map(([page, libelle, nomIcone]) => `<button class="${page === actif ? 'actif' : ''}" onclick="aller('${page}')">${icone(nomIcone)}${libelle}</button>`).join('');
     };
     const verifierNotifications = () => appelerApi('/me/notifications').then((notifications) => {
@@ -579,6 +602,7 @@
     const PAGES = {};
     async function aller(page, argument, sansHistorique) {
       arreterMinuterie();
+      if (etat.role === 'recruiter' && ['offres', 'signalement'].includes(page)) { page = 'mesoffres'; argument = null; }
       if (!sansHistorique) { history.pushState({ page, argument }, ''); etat.profondeur++; }
       etat.page = page; window.scrollTo(0, 0);
       try { await PAGES[page](argument); }
@@ -654,6 +678,7 @@
 
     PAGES.accueil = () => {
       if (!etat.jeton) return afficherConnexion();
+      if (etat.role === 'recruiter') return afficherAccueilRecruteur();
       afficherOnglets('accueil'); etat.filtres.recherche = '';
       conteneur.innerHTML = `<div class="entete"><div><div class="discret">Bonjour ${echapper(etat.prenom)}</div><h1 style="margin:0">Je cherche…</h1></div>${boutonCloche()}</div>${barreRecherche()}
 <div class="grille">${TYPES.map((type, i) => `<button class="tuile" data-type="${type}">${icone('type' + i)}${type}</button>`).join('')}</div>
@@ -663,6 +688,20 @@ ${etat.role === 'recruiter'
       document.querySelectorAll('[data-type]').forEach((bouton) => bouton.onclick = () => { etat.filtres.type = bouton.dataset.type; etat.filtres.recherche = ''; aller('offres'); });
       brancherRecherche(); verifierNotifications();
     };
+
+    async function afficherAccueilRecruteur() {
+      afficherOnglets('accueil');
+      const [offres, notifications] = await Promise.all([appelerApi('/recruiter/opportunities'), appelerApi('/me/notifications')]);
+      const publiees = offres.filter((o) => o.moderation === 'approved' && !o.closed).length;
+      const enAttente = offres.filter((o) => o.moderation === 'pending').length;
+      const candidats = offres.reduce((total, o) => total + o.candidates, 0);
+      conteneur.innerHTML = `<div class="entete"><div><span class="badge neutre">Espace recruteur</span><h1 style="margin:6px 0 0">${echapper(etat.organisation || etat.prenom)}</h1></div>${boutonCloche()}</div>
+<div class="carte-noire"><div style="font-weight:800">Tu cherches des personnes pour travailler ?</div><div class="discret" style="margin:4px 0 12px;color:#B8B3AB">Journée, plusieurs jours, CDD, CDI ou à la tâche</div><button class="bouton-principal" onclick="aller('publier')">Publier une offre</button></div>
+<div class="etiquette">Mon activité</div><div class="stats"><div class="stat"><b>${publiees}</b>Publiées</div><div class="stat"><b>${enAttente}</b>En attente</div><div class="stat"><b>${candidats}</b>Candidats</div></div>
+<div class="etiquette">Derniers candidats</div>${notifications.slice(0, 3).map((n) => `<button class="carte" onclick="aller('fiche',${n.id})"><div class="carte-titre" style="margin:0">${echapper(n.t)}</div><div class="discret">${echapper(n.d)} · ${new Date(n.at).toLocaleDateString('fr-FR')}</div></button>`).join('') || '<p class="discret">Aucun candidat pour le moment.</p>'}
+<button class="bouton-secondaire" onclick="aller('mesoffres')">Voir mes offres</button>`;
+      verifierNotifications();
+    }
 
     PAGES.offres = async () => {
       if (!etat.jeton) return afficherConnexion();
@@ -699,7 +738,7 @@ ${etat.role === 'recruiter'
 ${offre.organization ? `<div class="ligne">${icone('profil')}Publiée par ${echapper(offre.organization)}</div>` : ''}<div class="ligne">${icone('lieu')}${echapper(offre.city)} · ${echapper(offre.type)}</div><div class="ligne">${icone('horloge')}${echapper(offre.availability)}</div>
 ${offre.contract_type ? `<div class="ligne">${icone('liste')}<b>${echapper(offre.contract_type)}</b>${offre.duration_text ? ' · ' + echapper(offre.duration_text) : ''}${offre.pay ? ' · ' + echapper(offre.pay) : ''}</div>` : ''}<p>${echapper(offre.description)}</p>
 <div class="etiquette">Signalements liés</div>${offre.reports.map((signalement) => `<div class="ligne" style="color:#B3261E">${icone('alerte')}${echapper(signalement.kind)}${signalement.amount ? ' · ' + signalement.amount + ' FCFA' : ''}</div>`).join('') || '<div class="discret">Aucun signalement.</div>'}
-${boutonPostuler}${boutonContact}<button class="lien-action" onclick="aller('signalement',${offre.id})">Signaler un problème</button>`;
+${boutonPostuler}${boutonContact}${etat.role === 'recruiter' ? '' : `<button class="lien-action" onclick="aller('signalement',${offre.id})">Signaler un problème</button>`}`;
     };
 
     PAGES.signalement = (idOffre) => {
@@ -745,7 +784,7 @@ ${boutonPostuler}${boutonContact}<button class="lien-action" onclick="aller('sig
 <button class="bouton-principal" id="voirMissions">Voir 5 missions pour moi</button>${suggestions ? `<div class="etiquette">Pour toi cette semaine</div>${suggestions.map(carteOffre).join('')}` : ''}
 ${candidatures.length ? `<div class="etiquette">Mes candidatures</div>${candidatures.map(carteOffre).join('')}` : ''}`;
       }
-      conteneur.innerHTML = `${enTete('Mon profil', boutonCloche())}<div class="discret">${echapper(etat.prenom)}</div>${corps}
+      conteneur.innerHTML = `${enTete('Mon profil', boutonCloche())}<div class="discret">${echapper(etat.prenom)} · Compte : <b>${LIBELLES_ROLE[etat.role] || 'Chercheur d\'emploi'}</b></div>${corps}
 ${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="display:block;text-align:center;color:#0F0F0F" href="/admin.html">Back-office</a>' : ''}<button class="lien-action" onclick="localStorage.clear();location.href='/'" style="color:#6B6B6B">Se déconnecter</button>`;
       document.querySelectorAll('[data-competence]').forEach((bouton) => bouton.onclick = async () => {
         const competence = bouton.dataset.competence;
@@ -765,7 +804,7 @@ ${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="di
 
     // ---------- espace recruteur ----------
     PAGES.publier = () => {
-      afficherOnglets('profil'); const brouillon = {};
+      afficherOnglets('mesoffres'); const brouillon = {};
       const groupe = (cle, valeurs) => `<div class="puces">${valeurs.map((valeur) => `<button class="puce" data-champ="${cle}" data-valeur="${valeur}">${valeur}</button>`).join('')}</div>`;
       conteneur.innerHTML = `${enTete('Publier une offre')}<div class="note a-verifier">L'équipe JOKO vérifie ton offre avant sa publication.</div>
 <div class="etiquette">Titre</div><input id="titre" maxlength="120" placeholder="Ex. : Aide-livreur">
@@ -795,7 +834,7 @@ ${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="di
     };
 
     PAGES.mesoffres = async () => {
-      afficherOnglets('profil'); const offres = await appelerApi('/recruiter/opportunities');
+      afficherOnglets('mesoffres'); const offres = await appelerApi('/recruiter/opportunities');
       conteneur.innerHTML = `${enTete('Mes offres')}${offres.map((offre) => `<div class="carte"><span class="badge neutre">${offre.closed ? 'Clôturée' : ETATS_OFFRE[offre.moderation]}</span><div class="carte-titre">${echapper(offre.title)}</div>${ligneContrat(offre)}<div class="discret">${offre.candidates} candidat${offre.candidates > 1 ? 's' : ''}</div>
 <button class="bouton-secondaire" onclick="aller('candidats',${offre.id})">Voir les candidats (${offre.candidates})</button>${offre.closed ? '' : `<button class="lien-action" style="color:#6B6B6B" onclick="cloturerOffre(${offre.id})">Clôturer l'offre</button>`}</div>`).join('') || '<p class="discret">Tu n\'as pas encore publié d\'offre.</p>'}
 <button class="bouton-principal" onclick="aller('publier')">Publier une offre</button>`;
@@ -807,7 +846,7 @@ ${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="di
     }
 
     PAGES.candidats = async (idOffre) => {
-      afficherOnglets('profil'); const resultat = await appelerApi('/recruiter/opportunities/' + idOffre + '/candidates');
+      afficherOnglets('mesoffres'); const resultat = await appelerApi('/recruiter/opportunities/' + idOffre + '/candidates');
       conteneur.innerHTML = `${enTete('Candidats')}<div class="discret">${echapper(resultat.title)}</div><div style="height:10px"></div>${resultat.candidats.map((candidat) => `<div class="carte"><div class="carte-titre" style="margin-top:0">${echapper(candidat.name || 'Sans prénom')}</div><div class="puces" style="margin:6px 0">${candidat.skills.map((competence) => `<span class="badge neutre">${echapper(competence)}</span>`).join('') || '<span class="discret">Aucune compétence indiquée</span>'}</div><div class="discret">A postulé le ${new Date(candidat.applied_at).toLocaleDateString('fr-FR')}</div><a class="bouton-secondaire" href="tel:${echapper(candidat.phone)}">Appeler ${echapper(candidat.phone)}</a></div>`).join('') || '<p class="discret">Aucun candidat pour le moment.</p>'}`;
     };
 
@@ -821,8 +860,12 @@ ${['moderator', 'admin'].includes(etat.role) ? '<a class="lien-action" style="di
     const majReseau = () => { choisir('#bandeauHorsLigne').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine) renvoyerSignalementsEnAttente(); };
     addEventListener('online', majReseau); addEventListener('offline', majReseau); majReseau();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+    async function synchroniserCompte() {
+      try { const compte = await appelerApi('/me'); etat.role = localStorage.role = compte.role; etat.prenom = localStorage.prenom = compte.name || ''; etat.organisation = localStorage.organisation = compte.organization || ''; }
+      catch { /* hors ligne : on garde les valeurs enregistrées */ }
+    }
     history.replaceState({ page: 'accueil' }, '');
-    etat.jeton ? PAGES.accueil() : afficherConnexion();
+    if (etat.jeton) synchroniserCompte().then(() => aller('accueil', null, true)); else afficherConnexion();
   </script>
 </body>
 

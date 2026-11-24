@@ -44,16 +44,28 @@ const limiteCodeSms = limiteur({ windowMs: 60000, max: 5, message: { error: 'Tro
 
 const gererErreurs = (fonction) => (requete, reponse, suite) =>
   fonction(requete, reponse, suite).catch((erreur) => { console.error('ERREUR SERVEUR :', erreur); reponse.status(500).json({ error: 'Erreur serveur' }); });
-const exigerConnexion = (rolesAutorises) => (requete, reponse, suite) => {
+const exigerConnexion = (rolesAutorises) => async (requete, reponse, suite) => {
+  let jeton;
+  try { jeton = jwt.verify((requete.headers.authorization || '').slice(7), SECRET_JWT); }
+  catch { return reponse.status(401).json({ error: 'Non connecté' }); }
   try {
-    requete.utilisateur = jwt.verify((requete.headers.authorization || '').slice(7), SECRET_JWT);
-    if (rolesAutorises && !rolesAutorises.includes(requete.utilisateur.role)) return reponse.status(403).json({ error: 'Interdit' });
+    // Le rôle est relu dans la base à chaque requête : un changement de rôle ou une suspension s'applique tout de suite.
+    const compte = (await bdd.query('select role,suspended from users where id=$1', [jeton.id])).rows[0];
+    if (!compte || compte.suspended) return reponse.status(401).json({ error: 'Non connecté' });
+    requete.utilisateur = { id: jeton.id, role: compte.role };
+    if (rolesAutorises && !rolesAutorises.includes(compte.role)) return reponse.status(403).json({ error: 'Interdit' });
     suite();
-  } catch { reponse.status(401).json({ error: 'Non connecté' }); }
+  } catch (erreur) { console.error('ERREUR SERVEUR :', erreur); reponse.status(500).json({ error: 'Erreur serveur' }); }
 };
 const exigerModerateur = exigerConnexion(['moderator', 'admin']);
 const journaliserAction = (idModerateur, objet, decision, motif) =>
   bdd.query('insert into mod_log(moderator_id,object,decision,reason) values($1,$2,$3,$4)', [idModerateur, objet, decision, motif || '']);
+
+// Informations du compte connecté (le rôle fait foi côté base de données)
+appli.get('/api/me', exigerConnexion(), gererErreurs(async (requete, reponse) => {
+  const compte = (await bdd.query('select name,role,organization from users where id=$1', [requete.utilisateur.id])).rows[0];
+  reponse.json({ name: compte.name, role: compte.role, organization: compte.organization });
+}));
 
 // ---------- F-01 Connexion par téléphone + code SMS ----------
 appli.post('/api/auth/otp/request', limiteCodeSms, gererErreurs(async (requete, reponse) => {
